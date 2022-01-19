@@ -26,6 +26,7 @@ from resource_retriever import get_filename
 import rospy
 
 from coral_usb.util import get_panorama_sliced_image
+from coral_usb.util import get_panorama_sliced_image_xy
 from coral_usb.util import get_panorama_slices
 from coral_usb.util import non_maximum_suppression
 
@@ -307,10 +308,20 @@ class EdgeTPUPanoramaDetectorBase(EdgeTPUDetectorBase):
         bboxes = []
         labels = []
         scores = []
-        for panorama_slice in panorama_slices:
-            img = get_panorama_sliced_image(orig_img, panorama_slice)
+        # for panorama_slice in panorama_slices:
+            # img = get_panorama_sliced_image(orig_img, panorama_slice)
+
+        ## crop a 300 x 300 pixel for detection from 640 x 480 input image
+        ## following latest coral edgetpu fashion: https://github.com/google-coral/pycoral/blob/master/examples/small_object_detection.py
+        panorama_slices_width = [slice(200, 500)]
+        panorama_slices_height = [slice(100, 400)]
+        for i in range(0, len(panorama_slices_width)):
+            panorama_slice_width = panorama_slices_width[i]
+            panorama_slice_height = panorama_slices_height[i]
+            img = get_panorama_sliced_image_xy(orig_img, panorama_slice_width, panorama_slice_height)
             bbox, label, score = self._detect_step(
-                img, x_offset=panorama_slice.start)
+                # img, x_offset=panorama_slice.start)
+                img, x_offset=panorama_slice_width.start, y_offset=panorama_slice_height.start)
             if len(bbox) > 0:
                 bboxes.append(bbox)
                 labels.append(label)
@@ -363,3 +374,4 @@ class EdgeTPUPanoramaDetectorBase(EdgeTPUDetectorBase):
         config = super(EdgeTPUPanoramaDetectorBase, self).config_callback(
             config, level)
         return config
+

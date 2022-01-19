@@ -30,6 +30,11 @@ def get_panorama_sliced_image(panorama_img, panorama_slice):
     return img
 
 
+def get_panorama_sliced_image_xy(panorama_img, panorama_slice_width, panorama_slice_height):
+    img = panorama_img[panorama_slice_height, panorama_slice_width, :]
+    return img
+
+
 # copied from chainercv
 def non_maximum_suppression(bbox, thresh, score=None, limit=None):
     if len(bbox) == 0:
