@@ -105,6 +105,23 @@ class EdgeTPUDetectorBase(ConnectionBasedTransport):
                         device_id, device_path))
         self.device_path = device_path
 
+        self.crop = rospy.get_param(namespace + 'crop', False)
+        crop_height_start = rospy.get_param(namespace + 'crop_height_start',
+                                            None)
+        if self.crop:
+            crop_height_start = rospy.get_param(namespace
+                                                + 'crop_height_start', None)
+            crop_height_size = rospy.get_param(namespace
+                                               + 'crop_height_size', None)
+            crop_width_start = rospy.get_param(namespace + 'crop_width_start',
+                                               None)
+            crop_width_size = rospy.get_param(namespace + 'crop_width_size',
+                                              None)
+            self.crop_region_y = [crop_height_start, crop_height_start
+                                  + crop_height_size]
+            self.crop_region_x = [crop_width_start, crop_width_start
+                                  + crop_width_size]
+
         if not grp.getgrnam('plugdev').gr_gid in os.getgroups():
             rospy.logerr('Current user does not belong to plugdev group')
             rospy.logerr('Please run `sudo adduser $(whoami) plugdev`')
@@ -225,6 +242,11 @@ class EdgeTPUDetectorBase(ConnectionBasedTransport):
         return bboxes, labels, scores
 
     def _detect_step(self, img, y_offset=None, x_offset=None):
+        if self.crop:
+            img = img[self.crop_region_y[0]:self.crop_region_y[1],
+                      self.crop_region_x[0]:self.crop_region_x[1], :]
+            y_offset = self.crop_region_y[0]
+            x_offset = self.crop_region_x[0]
         H, W = img.shape[:2]
         objs = self.engine.DetectWithImage(
             PIL.Image.fromarray(img), threshold=self.score_thresh,

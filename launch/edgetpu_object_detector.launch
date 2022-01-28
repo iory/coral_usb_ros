@@ -7,6 +7,11 @@
   <arg name="label_file"
        default="package://coral_usb/models/coco_labels.txt"/>
   <arg name="device_id" default="0" />
+  <arg name="crop" default="false" />
+  <arg name="crop_height_size" default="" />
+  <arg name="crop_width_size" default="" />
+  <arg name="crop_height_start" default="" />
+  <arg name="crop_width_start" default="" />
 
   <node name="$(arg nodename)"
         pkg="coral_usb" type="edgetpu_object_detector.py"
@@ -17,6 +22,11 @@
       label_file: $(arg label_file)
       image_transport: $(arg IMAGE_TRANSPORT)
       device_id: $(arg device_id)
+      crop: $(arg crop)
+      crop_height_size: $(arg crop_height_size)
+      crop_width_size: $(arg crop_width_size)
+      crop_height_start: $(arg crop_height_start)
+      crop_width_start: $(arg crop_width_start)
     </rosparam>
   </node>
 </launch>
