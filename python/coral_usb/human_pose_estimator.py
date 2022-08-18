@@ -1,7 +1,5 @@
 import copy
-import matplotlib
-matplotlib.use("Agg")  # NOQA
-import matplotlib.pyplot as plt
+import matplotlib.cm
 import numpy as np
 import os
 import sys
@@ -236,24 +234,23 @@ class EdgeTPUHumanPoseEstimator(ConnectionBasedTransport):
             return
 
         with self.lock:
-            img = self.img.copy()
+            vis_img = self.img.copy()
             header = copy.deepcopy(self.header)
             points = self.points.copy()
             visibles = self.visibles.copy()
 
-        fig = plt.figure(
-            tight_layout={'pad': 0})
-        ax = plt.Axes(fig, [0., 0., 1., 1.])
-        ax.axis('off')
-        fig.add_axes(ax)
-        vis_point(img.transpose((2, 0, 1)), points, visibles, ax=ax)
-        fig.canvas.draw()
-        w, h = fig.canvas.get_width_height()
-        vis_img = np.fromstring(
-            fig.canvas.tostring_rgb(), dtype=np.uint8)
-        vis_img.shape = (h, w, 3)
-        fig.clf()
-        plt.close()
+        # keypoints
+        cmap = matplotlib.cm.get_cmap('hsv')
+        for i, (point, visible) in enumerate(zip(points, visibles)):
+            n = len(point) - 1
+            for j, (pp, vis) in enumerate(zip(point, visible)):
+                if vis:
+                    py = pp[0] % vis_img.shape[0]
+                    px = pp[1] % vis_img.shape[1]
+                    rgba = np.array(cmap(1. * j / n))
+                    color = rgba[:3] * 255
+                    cv2.circle(vis_img, (px, py), 8, color, thickness=-1)
+
         if self.pub_image.get_num_connections() > 0:
             vis_msg = self.bridge.cv2_to_imgmsg(vis_img, 'rgb8')
             # BUG: https://answers.ros.org/question/316362/sensor_msgsimage-generates-float-instead-of-int-with-python3/  # NOQA

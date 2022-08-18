@@ -1,7 +1,5 @@
 import copy
-import matplotlib
-matplotlib.use("Agg")  # NOQA
-import matplotlib.pyplot as plt
+import matplotlib.cm
 import numpy as np
 import os
 import re
@@ -198,28 +196,31 @@ class EdgeTPUDetectorBase(ConnectionBasedTransport):
             return
 
         with self.lock:
-            img = self.img.copy()
+            vis_img = self.img.copy()
             header = copy.deepcopy(self.header)
             bboxes = self.bboxes.copy()
             labels = self.labels.copy()
             scores = self.scores.copy()
 
-        fig = plt.figure(
-            tight_layout={'pad': 0})
-        ax = plt.Axes(fig, [0., 0., 1., 1.])
-        ax.axis('off')
-        fig.add_axes(ax)
-        vis_bbox(
-            img.transpose((2, 0, 1)),
-            bboxes, labels, scores,
-            label_names=self.label_names, ax=ax)
-        fig.canvas.draw()
-        w, h = fig.canvas.get_width_height()
-        vis_img = np.fromstring(
-            fig.canvas.tostring_rgb(), dtype=np.uint8)
-        vis_img.shape = (h, w, 3)
-        fig.clf()
-        plt.close()
+        # bbox
+        cmap = matplotlib.cm.get_cmap('hsv')
+        n = max(len(bboxes) - 1, 10)
+        for i, (bbox, label, score) in enumerate(zip(bboxes, labels, scores)):
+            rgba = np.array(cmap(1. * i / n))
+            color = rgba[:3] * 255
+            label_text = '{}, {:.2f}'.format(self.label_names[label], score)
+            p1y = max(bbox[0], 0)
+            p1x = max(bbox[1], 0)
+            p2y = min(bbox[2], vis_img.shape[0])
+            p2x = min(bbox[3], vis_img.shape[1])
+            cv2.rectangle(
+                vis_img, (p1x, p1y), (p2x, p2y),
+                color, thickness=3, lineType=cv2.LINE_AA)
+            cv2.putText(
+                vis_img, label_text, (p1x, max(p1y - 10, 0)),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color,
+                thickness=2, lineType=cv2.LINE_AA)
+
         if self.pub_image.get_num_connections() > 0:
             vis_msg = self.bridge.cv2_to_imgmsg(vis_img, 'rgb8')
             # BUG: https://answers.ros.org/question/316362/sensor_msgsimage-generates-float-instead-of-int-with-python3/  # NOQA
