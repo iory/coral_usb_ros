@@ -24,14 +24,14 @@ def main():
   name: '{1}'
 }}
 
-""".format(i + 1, name)
+""".format(i + 1, name.decode('utf-8'))
         text = text + txt
     text = text[:-1]
     output_path = os.path.join(
         args.output_dir,
         '{}_dataset_label_map.pbtxt'.format(args.data_prefix))
     with open(output_path, 'w') as f:
-        f.write(text)
+        f.write(text.encode('utf-8'))
 
 
 if __name__ == '__main__':
