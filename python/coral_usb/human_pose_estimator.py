@@ -38,6 +38,26 @@ from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Int32
 
 
+BONE_NAMES = [
+    ('nose', 'left eye'),
+    ('nose', 'right eye'),
+    ('left eye', 'left ear'),
+    ('right eye', 'right ear'),
+    ('left shoulder', 'right shoulder'),
+    ('left shoulder', 'left elbow'),
+    ('right shoulder', 'right elbow'),
+    ('left elbow', 'left wrist'),
+    ('right elbow', 'right wrist'),
+    ('left shoulder', 'left hip'),
+    ('right shoulder', 'right hip'),
+    ('left hip', 'right hip'),
+    ('left hip', 'left knee'),
+    ('right hip', 'right knee'),
+    ('left knee', 'left ankle'),
+    ('right knee', 'right ankle')
+]
+
+
 class EdgeTPUHumanPoseEstimator(EdgeTPUNodeBase):
 
     _engine_class = PoseEngine
@@ -183,14 +203,21 @@ class EdgeTPUHumanPoseEstimator(EdgeTPUNodeBase):
                     pose_msg.scores.append(sc)
                     pose_msg.poses.append(
                         Pose(position=Point(x=key_x, y=key_y)))
-            for i in range(len(pose_msg.poses)):
-                bone_name = "{}->{}".format(pose_msg.limb_names[i - 1],
-                                            pose_msg.limb_names[i])
-                skel_msg.bone_names.append(bone_name)
-                seg = Segment()
-                seg.start_point = pose_msg.poses[i - 1].position
-                seg.end_point = pose_msg.poses[i].position
-                skel_msg.bones.append(seg)
+
+            limb_name_to_index = {
+                limb_name: idx
+                for idx, limb_name in enumerate(pose_msg.limb_names)}
+            for start_name, end_name in BONE_NAMES:
+                if start_name in limb_name_to_index \
+                   and end_name in limb_name_to_index:
+                    start_idx = limb_name_to_index[start_name]
+                    end_idx = limb_name_to_index[end_name]
+                    bone_name = "{}->{}".format(start_name, end_name)
+                    skel_msg.bone_names.append(bone_name)
+                    seg = Segment()
+                    seg.start_point = pose_msg.poses[start_idx].position
+                    seg.end_point = pose_msg.poses[end_idx].position
+                    skel_msg.bones.append(seg)
             skels_msg.skeletons.append(skel_msg)
             poses_msg.poses.append(pose_msg)
             y_min, x_min, y_max, x_max = bbox
